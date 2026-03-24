@@ -50,9 +50,23 @@ int main() {
         exit(1);
     }
 
-
+    /**
+    When reading the battleship cells, first 100 are the opponent's board 
+    and the next 100 are the player's board. Each cell is represented by a struct
+    with the battleship id and whether it is hit or not. The client will read the 
+    whole board every time and then display it to the user. The client will also 
+    read a message from the user and send it to the server. The message will be in 
+    the format "x y" where x and y are the coordinates of the cell that the player 
+    wants to attack. The server will then check if there is a battleship in that cell 
+    and update the boards accordingly. The server will also send a message back to the 
+    client indicating whether the attack was successful or not. The client will then 
+    display the updated boards to the user and wait for the next input. The game will 
+    continue until one of the players has all their battleships sunk. The server will 
+    then send a message to both clients indicating who won and who lost. The clients 
+    will then display the result to the user and exit.
+    **/
     Battleship_cell *** board_message_buf = malloc(200* sizeof(Battleship_cell));
-    char ** message_buf = malloc(20* sizeof(char*));
+    char ** message_buf = malloc(200* sizeof(char*));
     
 
     // only 5 ships so only needs to be done 5 times
@@ -69,8 +83,6 @@ int main() {
 
     while(true) {
 
-        // if 1 then just read messsgae
-        // if 2 then read message and send response (?)
         
         read(soc, board_message_buf, sizeof(board_message_buf));
         read(soc, game_status_message_buf, sizeof(game_status_message_buf));
