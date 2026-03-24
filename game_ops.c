@@ -25,11 +25,12 @@ int fill_board(Battleship_cell*** board, int player_id) {
         printf("This cell is already occupied\n");
         return 1;
     }
-    for (int i = 0; i < )
 }
 
-int fill_pixel(Battleship_cell*** board, Battleship_cell int player_id, int x, int y) {
+int fill_pixel(Battleship_cell*** board, int x, int y,
+    int battleship_id, int battleship_orientation) {
     if (board[y][x] != NULL)
         return 1;
-
+    board[y][x] = malloc(sizeof(Battleship_cell));
+    board[y][x]->battleship_id
 }

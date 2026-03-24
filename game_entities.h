@@ -7,6 +7,5 @@
 typedef struct {
     int orientation;
     int battleship_id;
-    int player_id;
 } Battleship_cell;
 #endif //FINAL_PROJECT_GAME_ENTITIES_H
