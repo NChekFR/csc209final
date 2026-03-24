@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include "game_entities.h"
 #define BOARD_SIZE 10
 
@@ -80,4 +79,12 @@ int hit_battleship(Battleship_cell*** board, int x, int y) {
         return 0;
     board[y][x]->hit = 1;
     return 1;
+}
+
+/*Free the memory allocated by the board*/
+int free_board(Battleship_cell*** board) {
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        free(board[i]);
+    }
+    free(board);
 }
