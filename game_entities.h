@@ -10,7 +10,7 @@ typedef struct {
 } Battleship_cell;
 
 typedef struct {
-    char name[10];
+    char name[20];
     int id;
     int width;
     int height;
