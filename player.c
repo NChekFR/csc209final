@@ -50,7 +50,56 @@ int main() {
         exit(1);
     }
 
-  
+
+    Battleship_cell *** board_message_buf = malloc(200* sizeof(Battleship_cell));
+    char ** message_buf = malloc(20* sizeof(char*));
+    
+
+    // only 5 ships so only needs to be done 5 times
+    for (int i = 0; i < 5; i++) {
+        // send and receive positions of your ships 
+        read(soc, board_message_buf, sizeof(board_message_buf));
+
+        read(STIDIN, message_buf, sizeof(message_buf));
+        write(soc, message_buf, sizeof(message_buf));
+    }
+
+    int *game_status_message_buf = malloc(sizeof(int));
+    
+
+    while(true) {
+
+        // if 1 then just read messsgae
+        // if 2 then read message and send response (?)
+        
+        read(soc, board_message_buf, sizeof(board_message_buf));
+        read(soc, game_status_message_buf, sizeof(game_status_message_buf));
+        if (*game_status_message_buf != 0) {
+            break;
+        }
+
+
+        display_legend();
+        display_opponent_board(board_message_buf);
+        display_player_board(board_message_buf);
+
+        read(STIDIN, message_buf, sizeof(message_buf));
+
+        // check for the validity of the message and if it is valid then send it to the server
+        
+        write(soc, message_buf, sizeof(message_buf));
+        
+        
+        
+        
+    }
+
+    // server will send 1 and -1 depending on which player won
+    if (game_status_message_buf == 1) {
+        printf("You win!");
+    } else {
+        printf("You lose!");
+    }
     
 
 
@@ -68,4 +117,16 @@ int main() {
     return 0;
 
 */
+}
+
+void display_legend() {
+    // Implementation for displaying the legend explaining the symbols used in the game
+}
+
+void display_player_board(Battleship_cell*** board) {
+    // Implementation for displaying player's board
+}
+
+void display_opponent_board(Battleship_cell*** board) {
+    // Implementation for displaying opponent's board
 }
