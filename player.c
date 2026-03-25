@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>    /* Internet domain header */
 #include <netdb.h>
+#include <stdbool.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "game_entities.h"
@@ -68,15 +69,16 @@ int main() {
     **/
     Battleship_cell *** board_message_buf = malloc(200* sizeof(Battleship_cell));
     char ** message_buf = malloc(200* sizeof(char*));
-    
+    int new_battleship_data[] = {0, 0, 0};
+    int battleship_coordinates[] = {0, 0};
 
     // only 5 ships so only needs to be done 5 times
     for (int i = 0; i < 5; i++) {
         // send and receive positions of your ships 
         read(soc, board_message_buf, sizeof(board_message_buf));
 
-        read(STIDIN, message_buf, sizeof(message_buf));
-        write(soc, message_buf, sizeof(message_buf));
+        scanf("%d %d %d", &new_battleship_data[0], &new_battleship_data[1], &new_battleship_data[2]);
+        write(soc, new_battleship_data, sizeof(new_battleship_data));
     }
 
     int *game_status_message_buf = malloc(sizeof(int));

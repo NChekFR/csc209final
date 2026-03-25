@@ -69,10 +69,19 @@ int insert_battleship(Battleship_cell*** board, Battleship* battleship,
             board[y + j][x + i]->battleship_id = battleship->id;
         }
     }
+    if (battleship_orientation == 1) {
+        int buf = battleship->width;
+        battleship->width = battleship->height;
+        battleship->height = buf;
+    }
+    return 0;
 }
 
-/*Returns 0 if the battleship cell is damaged as the result of the hit and 1 otherwise*/
+/*Returns 0 if the battleship cell is damaged as the result of the hit and 1 otherwise.
+ *Returns -1 if the error occured.*/
 int hit_battleship(Battleship_cell*** board, int x, int y) {
+    if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE)
+        return -1;
     if (board[y][x] == NULL)
         return 0;
     if (board[y][x]->hit == 1)
@@ -82,9 +91,33 @@ int hit_battleship(Battleship_cell*** board, int x, int y) {
 }
 
 /*Free the memory allocated by the board*/
-int free_board(Battleship_cell*** board) {
+void free_board(Battleship_cell*** board) {
     for (int i = 0; i < BOARD_SIZE; i++) {
         free(board[i]);
     }
     free(board);
 }
+
+char* return_board(Battleship_cell*** board, int is_opponent) {
+    char *board_to_return = malloc(BOARD_SIZE * BOARD_SIZE * sizeof(char) + 2);
+    int k = 0;
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            if (board[i][j] == NULL) {
+                board_to_return[k] = '*';
+            }
+            if (board[i][j] != NULL && board[i][j]->hit == 1) {
+                board_to_return[k] = 'X';
+            }
+            if (board[i][j] != NULL && board[i][j]->hit == 0 && is_opponent == 0) {
+                board_to_return[k] = 'O';
+            }
+            k++;
+        }
+        k++;
+    }
+    board_to_return[k + 1] = '\r';
+    board_to_return[k + 2] = '\n';
+    return board_to_return;
+}
+
