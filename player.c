@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "game_entities.h"
+#define BOARD_SIZE 10
 
 
 int main() {
@@ -81,29 +82,60 @@ int main() {
     int *game_status_message_buf = malloc(sizeof(int));
     
 
-    while(true) {
+    int attempted_spots[10][10];
+    memset(attempted_spots, 0, sizeof(attempted_spots));
 
-        
+    while (1) {
         read(soc, board_message_buf, sizeof(board_message_buf));
         read(soc, game_status_message_buf, sizeof(game_status_message_buf));
         if (*game_status_message_buf != 0) {
             break;
         }
 
-
         display_legend();
         display_opponent_board(board_message_buf);
         display_player_board(board_message_buf);
 
-        read(STIDIN, message_buf, sizeof(message_buf));
+        int x, y;
+        char input_buf[128];
+        char send_buf[32];
 
-        // check for the validity of the message and if it is valid then send it to the server
-        
-        write(soc, message_buf, sizeof(message_buf));
-        
-        
-        
-        
+        while (1) {
+            printf("Enter attack coordinates (x y) in range 0..9: ");
+            if (fgets(input_buf, sizeof(input_buf), stdin) == NULL) {
+                printf("Input error. Try again.\n");
+                continue;
+            }
+
+            if (sscanf(input_buf, "%d %d", &x, &y) != 2) {
+                printf("Invalid format. Use two numbers: x y\n");
+                continue;
+            }
+
+            if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE) {
+                printf("Coordinates out of range (0..9).\n");
+                continue;
+            }
+
+            if (attempted_spots[y][x]) {
+                printf("Already attempted (%d %d). Pick a different target.\n", x, y);
+                continue;
+            }
+
+            attempted_spots[y][x] = 1;
+            break;
+        }
+
+        snprintf(send_buf, sizeof(send_buf), "%d %d", x, y);
+        write(soc, send_buf, strlen(send_buf) + 1);
+
+        // wait for server response to attack
+        if (read(soc, input_buf, sizeof(input_buf)) > 0) {
+            printf("Server response: %s\n", input_buf);
+        } else {
+            printf("Server closed connection or read error.\n");
+            break;
+        }
     }
 
     // server will send 1 and -1 depending on which player won
@@ -137,8 +169,41 @@ void display_legend() {
 
 void display_player_board(Battleship_cell*** board) {
     // Implementation for displaying player's board
+    // last 100 cells of the board_message_buf are the player's board
+
+    printf("Your board:\n");
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            Battleship_cell cell = board[i][j];
+            if (cell == NULL) {
+                printf("· ");
+            } else if (cell.hit == 0) {
+                printf("O ");
+            } else {
+                printf("X ");
+            }
+        }
+        printf("\n");
+    }
 }
 
 void display_opponent_board(Battleship_cell*** board) {
     // Implementation for displaying opponent's board
+    // first 100 cells of the board_message_buf are the opponent's board
+
+    printf("Opponent's board:\n");
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            Battleship_cell cell = board[i][j];
+            if (cell == NULL) {
+                printf("· ");
+            } else if (cell.hit == 0) {
+                printf("· ");
+            } else {
+                printf("X ");
+            }
+        }
+        printf("\n");
+    }
+    
 }
