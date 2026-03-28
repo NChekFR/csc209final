@@ -107,34 +107,57 @@ int* connect_to_players() {
 }
 
 int main() {
+
+    //Conditions for game over. game_over is 1 when the game is over. player_wins 0 is when the first player wins, and
+    // 1 when the other player wins
     int game_over = 0;
     int player_wins = 0;
+
+    //Initialize boards for both players
     initialize_board(player_board[0]);
     initialize_board(player_board[1]);
 
+    //Connect to player clients
     int* player_sockets = connect_to_players();
 
+    //Buffer for the message sent from server to the client
     char message_buf[1024];
+
+    //Buffer for the message sent from client to the server
     char response_buf[1024];
+
+    //correct_response is 1 when the response from the client aligns with the required type and 0 otherwise
     int correct_response = 0;
+
+    //Loop over the list of battleships for both players to initialize them
     for (int i = 0; i < 5; i++) {
+
+        //Loop over clients for each battleship
         for (int j = 0; j < 2; j++) {
             int parsed_response[3];
             clear_message_buf(message_buf);
             strcat(message_buf, "0");
             strcat(message_buf, "Enter the coordintaes of the ");
             strcat(message_buf, battleships[i].name);
+
+            //Send the message asking for player to send his coordinates
             write(player_sockets[j], message_buf, strlen(message_buf));
+
+            //Loop while the response from the player is of the incorrect format
             while (correct_response == 0) {
                 read(player_sockets[j], response_buf, 3);
                 int convertion_error = parse_response(message_buf, response_buf, parsed_response, 3);
                 if (convertion_error == 1)
                     continue;
+
+                //Attempt to place the battleship on the given location
                 int result = insert_battleship(player_board[j], &battleships[i], parsed_response[2],
                     parsed_response[0], parsed_response[1]);
+                //If the battleship can be placed, change the loop condition for it to terminate
                 if (result == 0) {
                     correct_response = 1;
                 }
+                //If the battleship cannot be placed, form a signaling message to the client and do not terminate the loop
                 else {
                     form_message(message_buf, "The battleship cannot be placed here. Please, try another spot.\r\n",
                         j, 0);
@@ -145,45 +168,72 @@ int main() {
             write(player_sockets[j], message_buf, strlen(message_buf));
         }
     }
+
+    //Message to be sent to another player with the description of the results of actions taken by the first player
     char *message_to_opponent = "";
     char *message_to_write = malloc(strlen(message_to_opponent) + 55);
+    correct_response = 0;
+    int result_of_the_hit = 0;
+    //Main game loop
     while (game_over == 0) {
         for (int j = 0; j < 2; j++) {
             int parsed_response[2];
             strcpy(message_to_write, message_to_opponent);
             strcat(message_to_write, "Enter the coordinates of the cell you want to hit.\r\n");
             form_message(message_buf, message_to_write,j, 1);
+
+            //Send a message to the player asking him to enter the coordinates of the battleship he wants to hit
             write(player_sockets[j], message_buf, strlen(message_buf));
-            read(player_sockets[j], response_buf, 2);
-            int convertion_error = parse_response(message_buf, response_buf, parsed_response, 2);
-            if (convertion_error == 1)
-                continue;
-            int result = hit_battleship(player_board[j], parsed_response[0], parsed_response[1]);
-            if (result == 1) {
+
+            //Loop while the response from the player is of the incorrect format
+            while (correct_response == 0) {
+                read(player_sockets[j], response_buf, 2);
+                int convertion_error = parse_response(message_buf, response_buf, parsed_response, 2);
+                if (convertion_error == 1)
+                    continue;
+                result_of_the_hit = hit_battleship(player_board[j], parsed_response[0], parsed_response[1]);
+                if (result_of_the_hit == -1) {
+                    form_message(message_buf, "Invalid coordinates. Please, try again.\r\n",
+                        j, 0);
+                    continue;
+                }
+                correct_response = 1;
+            }
+
+            //Player was able to hit the opponents battleship
+            if (result_of_the_hit == 1) {
                 int battleship_id = player_board[j][parsed_response[0]][parsed_response[1]]->battleship_id;
+
+                //Decrease the number of cells corresponding the 'living' parts of the battleship
                 player_battleships[j][battleship_id]--;
+
+                //Decrease the number of the overall 'living; parts of all of the battleships that belong to a player
                 player_scores[j]--;
+
+                //If there are no more 'living' parts that correspond to a battleship
                 if (player_battleships[j][battleship_id] == 0) {
                     message_to_opponent = "Your battleship was destroyed! ";
                     form_message(message_buf, "You destroyed a battleship!\r\n", j, 1);
                 }
+
+                //If all the battleships belonging to player were destroyed
                 else if (player_scores[j] == 0) {
                     game_over = 1;
                     player_wins = j;
                     break;
                 }
+
+                //If the player was able to hit the battleship, but it still has 'living' parts
                 else {
                     message_to_opponent = "Your battleship was damaged! ";
                     form_message(message_buf, "You hit a battleship!\r\n", j, 1);
                 }
             }
-            else if (result == 0) {
+
+            //If the player has missed
+            else if (result_of_the_hit == 0) {
                 message_to_opponent = "Your opponent has missed! ";
                 form_message(message_buf, "You missed a battleship!\r\n", j, 1);
-            }
-            else {
-                form_message(message_buf, "Invalid coordinates. Please, try again.\r\n", 
-                    j, 0);
             }
             write(player_sockets[j], message_buf, strlen(message_buf));
         }
