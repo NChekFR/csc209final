@@ -6,18 +6,107 @@
 #include <netinet/in.h>    /* Internet domain header */
 #include <netdb.h>
 #include <stdbool.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
-#include "game_entities.h"
+#include "game_ops.h"
 
+#define MESSAGE_BUF_SIZE 4096
+
+
+// gcc -Wall -Wextra -std=c11 player.c -o player
+// ./player
+
+ssize_t send_all(int fd, const char *buf, size_t len) {
+    size_t total = 0;
+    while (total < len) {
+        ssize_t sent = write(fd, buf + total, len - total);
+        if (sent <= 0) {
+            return sent;
+        }
+        total += (size_t)sent;
+    }
+    return (ssize_t)total;
+}
+
+ssize_t read_exact(int fd, char *buf, size_t len) {
+    size_t total = 0;
+    while (total < len) {
+        ssize_t n = read(fd, buf + total, len - total);
+        if (n <= 0) {
+            return n;
+        }
+        total += (size_t)n;
+    }
+    return (ssize_t)total;
+}
+
+ssize_t read_until_newline(int fd, char *buf, size_t maxlen) {
+    size_t i = 0;
+    while (i + 1 < maxlen) {
+        char c;
+        ssize_t n = read(fd, &c, 1);
+        if (n <= 0) {
+            return n;
+        }
+        if (c == '\r') {
+            continue;
+        }
+        buf[i++] = c;
+        if (c == '\n') {
+            break;
+        }
+    }
+    buf[i] = '\0';
+    return (ssize_t)i;
+}
+
+void display_legend() {
+    // Implementation for displaying the legend explaining the symbols used in the game
+    printf("Legend:\n");
+    printf(". = unknown\n");
+    printf("* = miss\n");
+    printf("O = your ship\n");
+    printf("X = hit ship\n\n");
+}
+
+void display_player_board(const char *board) {
+    // Implementation for displaying player's board
+    printf("Your board:\n%s\n", board);
+}
+
+void display_opponent_board(const char *board) {
+    // Implementation for displaying opponent's board
+    printf("Opponent board:\n%s\n", board);
+}
+
+
+// Function to receive a message from the server and update the boards accordingly
+// first integer is the status of the message (0 for normal message, 1 for error)
+int receive_server_message(int soc, char *status, char *message_buf,
+                           char *opponent_board, char *player_board) {
+    if (read_exact(soc, status, 1) <= 0) {
+        return 1;
+    }
+
+    if (read_until_newline(soc, message_buf, MESSAGE_BUF_SIZE) <= 0) {
+        return 1;
+    }
+
+    if (*status == '0') {
+        if (read_exact(soc, opponent_board, BOARD_SERIALIZED_SIZE) <= 0) {
+            return 1;
+        }
+        opponent_board[BOARD_SERIALIZED_SIZE] = '\0';
+
+        if (read_exact(soc, player_board, BOARD_SERIALIZED_SIZE) <= 0) {
+            return 1;
+        }
+        player_board[BOARD_SERIALIZED_SIZE] = '\0';
+    }
+
+    return 0;
+}
 
 int main() {
-
-
-
-    //initialize 2 boards, one for self and one for opponent
-
-
 
 
     // create socket
@@ -31,19 +120,9 @@ int main() {
     //initialize server address    
     struct sockaddr_in server;
     server.sin_family = AF_INET;
-    server.sin_port = htons(54321);  
+    server.sin_port = htons(54321);
     memset(&server.sin_zero, 0, 8);
-    
-    struct addrinfo *ai;
-    char * hostname = "localhost";
-
-    /* this call declares memory and populates ailist */
-    getaddrinfo(hostname, NULL, NULL, &ai);
-    server.sin_addr = ((struct sockaddr_in *) ai->ai_addr)->sin_addr;
-
-
-    // free the memory that was allocated by getaddrinfo for this list
-    freeaddrinfo(ai);
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     int ret = connect(soc, (struct sockaddr *)&server, sizeof(struct sockaddr_in));
     if (ret == -1) {
@@ -57,7 +136,7 @@ int main() {
     with the battleship id and whether it is hit or not. The client will read the 
     whole board every time and then display it to the user. The client will also 
     read a message from the user and send it to the server. The message will be in 
-    the format "x y" where x and y are the coordinates of the cell that the player 
+    the format "x y" where x is the x coordinate and y is the y coordinate of the cell that the player 
     wants to attack. The server will then check if there is a battleship in that cell 
     and update the boards accordingly. The server will also send a message back to the 
     client indicating whether the attack was successful or not. The client will then 
@@ -66,81 +145,37 @@ int main() {
     then send a message to both clients indicating who won and who lost. The clients 
     will then display the result to the user and exit.
     **/
-    Battleship_cell *** board_message_buf = malloc(200* sizeof(Battleship_cell));
-    char ** message_buf = malloc(200* sizeof(char*));
-    int new_battleship_data[] = {0, 0, 0};
-    int battleship_coordinates[] = {0, 0};
+    char user_input[128];
+    char message_buf[MESSAGE_BUF_SIZE];
+    char opponent_board[BOARD_SERIALIZED_SIZE + 1];
+    char player_board_buf[BOARD_SERIALIZED_SIZE + 1];
+    char status;
 
-    // only 5 ships so only needs to be done 5 times
-    for (int i = 0; i < 5; i++) {
-        // send and receive positions of your ships 
-        read(soc, board_message_buf, sizeof(board_message_buf));
-
-        scanf("%d %d %d", &new_battleship_data[0], &new_battleship_data[1], &new_battleship_data[2]);
-        write(soc, new_battleship_data, sizeof(new_battleship_data));
-    }
-
-    int *game_status_message_buf = malloc(sizeof(int));
-    
-
-    while(true) {
-
-        
-        read(soc, board_message_buf, sizeof(board_message_buf));
-        read(soc, game_status_message_buf, sizeof(game_status_message_buf));
-        if (*game_status_message_buf != 0) {
+    while (true) {
+        if (receive_server_message(soc, &status, message_buf, opponent_board, player_board_buf) != 0) {
             break;
         }
 
+        if (status == '0') {
+            display_legend();
+            display_opponent_board(opponent_board);
+            display_player_board(player_board_buf);
+        }
+        printf("%s", message_buf);
 
-        display_legend();
-        display_opponent_board(board_message_buf);
-        display_player_board(board_message_buf);
-
-        read(STIDIN, message_buf, sizeof(message_buf));
+        if (strncmp(message_buf, "You won!", 8) == 0 || strncmp(message_buf, "You lost!", 9) == 0) {
+            break;
+        }
 
         // check for the validity of the message and if it is valid then send it to the server
-        
-        write(soc, message_buf, sizeof(message_buf));
-        
-        
-        
-        
+        if (strstr(message_buf, "Enter the") != NULL) {
+            if (fgets(user_input, sizeof(user_input), stdin) == NULL) {
+                break;
+            }
+            send_all(soc, user_input, strlen(user_input));
+        }
     }
 
-    // server will send 1 and -1 depending on which player won
-    if (game_status_message_buf == 1) {
-        printf("You win!");
-    } else {
-        printf("You lose!");
-    }
-    
-
-
-
-
-/*
-    printf("Connect returned %d\n", ret);
-
-    char buf[10];
-    read(soc, buf, 7);
-    buf[7] = '\0';
-    printf("I read %s\n", buf);
-
-    write(soc, "0123456789", 10);
+    close(soc);
     return 0;
-
-*/
-}
-
-void display_legend() {
-    // Implementation for displaying the legend explaining the symbols used in the game
-}
-
-void display_player_board(Battleship_cell*** board) {
-    // Implementation for displaying player's board
-}
-
-void display_opponent_board(Battleship_cell*** board) {
-    // Implementation for displaying opponent's board
 }

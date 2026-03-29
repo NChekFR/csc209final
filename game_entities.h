@@ -6,7 +6,8 @@
 #define FINAL_PROJECT_GAME_ENTITIES_H
 typedef struct {
     int battleship_id;
-    int hit; //0 if well, 1 if is damaged
+    int hit;   // 0 if well, 1 if is damaged
+    int tried; // 1 if this cell was targeted (hit OR miss)
 } Battleship_cell;
 
 typedef struct {
