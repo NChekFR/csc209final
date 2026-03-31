@@ -6,7 +6,9 @@
 #include <netinet/in.h>    /* Internet domain header */
 #include <arpa/inet.h>     /* only needed on my mac */
 #include "game_ops.h"
-
+#ifndef PORT
+#define PORT 4242
+#endif
 
 
 // gcc -Wall -Wextra -std=c11 server.c game_ops.c -o server
@@ -138,7 +140,7 @@ int* connect_to_players() {
     //initialize server address
     struct sockaddr_in server;
     server.sin_family = AF_INET;
-    server.sin_port = htons(54321);
+    server.sin_port = htons(PORT);
     memset(&server.sin_zero, 0, 8);
     server.sin_addr.s_addr = inet_addr("127.0.0.1");
 
