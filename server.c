@@ -157,6 +157,8 @@ int* connect_to_players() {
         exit(1);
     }
 
+    printf("Waiting for players...");
+
     socklen_t client_len = sizeof(struct sockaddr_in);
 
     struct sockaddr_in player1_addr;
@@ -171,6 +173,7 @@ int* connect_to_players() {
         close(listen_soc);
         exit(-1);
     }
+    printf("First player connected successfully! Waiting for the second player...");
 
     player_sockets[1] = accept(listen_soc, (struct sockaddr *)&player2_addr, &client_len);
     if (player_sockets[1] == -1) {
@@ -178,6 +181,8 @@ int* connect_to_players() {
         close(listen_soc);
         exit(-1);
     }
+    printf("Second player connected successfully!");
+
     close(listen_soc);
     return player_sockets;
 }
