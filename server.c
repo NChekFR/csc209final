@@ -174,6 +174,7 @@ int* connect_to_players() {
         exit(-1);
     }
     printf("First player connected successfully! Waiting for the second player...");
+    fflush(stdout);
 
     player_sockets[1] = accept(listen_soc, (struct sockaddr *)&player2_addr, &client_len);
     if (player_sockets[1] == -1) {
@@ -181,7 +182,9 @@ int* connect_to_players() {
         close(listen_soc);
         exit(-1);
     }
+
     printf("Second player connected successfully!");
+    fflush(stdout);
 
     close(listen_soc);
     return player_sockets;
