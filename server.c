@@ -149,6 +149,9 @@ int* connect_to_players() {
         exit(1);
     }
 
+    printf("Waiting for players...\n");
+    fflush(stdout);
+
     // Set up a queue in the kernel to hold pending connections.
     if (listen(listen_soc, 5) < 0) {
         // listen failed
@@ -157,7 +160,7 @@ int* connect_to_players() {
         exit(1);
     }
 
-    printf("Waiting for players...");
+
 
     socklen_t client_len = sizeof(struct sockaddr_in);
 
@@ -173,7 +176,7 @@ int* connect_to_players() {
         close(listen_soc);
         exit(-1);
     }
-    printf("First player connected successfully! Waiting for the second player...");
+    printf("First player connected successfully! Waiting for the second player...\n");
     fflush(stdout);
 
     player_sockets[1] = accept(listen_soc, (struct sockaddr *)&player2_addr, &client_len);
@@ -183,7 +186,7 @@ int* connect_to_players() {
         exit(-1);
     }
 
-    printf("Second player connected successfully!");
+    printf("Second player connected successfully!\n");
     fflush(stdout);
 
     close(listen_soc);
