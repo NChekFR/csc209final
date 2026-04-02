@@ -319,7 +319,7 @@ int send_move_prompt(int player_socket, int current_player, const char *message_
  * -1 -> disconnect / fatal socket error
  */
 int create_battleship(int player_socket, int current_player, int ship_index, char *response_buf) {
-    ssize_t n = read_line(player_socket, response_buf, sizeof(response_buf));
+    ssize_t n = read_line(player_socket, response_buf, MESSAGE_BUF_SIZE);
     if (n <= 0) {
         printf("Player %d exited\n", current_player + 1);
         fflush(stdout);
@@ -382,7 +382,7 @@ int handle_player_move(int player_socket, int current_player, char *message_to_o
     char message_buf[MESSAGE_BUF_SIZE];
 
     char response_buf[MESSAGE_BUF_SIZE];
-    ssize_t n = read_line(player_socket, response_buf, sizeof(response_buf));
+    ssize_t n = read_line(player_socket, response_buf, MESSAGE_BUF_SIZE);
     if (n <= 0) {
         printf("Player %d exited\n", current_player + 1);
         fflush(stdout);
