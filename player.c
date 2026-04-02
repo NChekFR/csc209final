@@ -9,7 +9,9 @@
 #include <stdbool.h>
 #include <arpa/inet.h>
 #include "game_ops.h"
-
+#ifndef PORT
+#define PORT 4242
+#endif
 #define MESSAGE_BUF_SIZE 4096
 
 
@@ -129,7 +131,7 @@ int main() {
     //initialize server address    
     struct sockaddr_in server;
     server.sin_family = AF_INET;
-    server.sin_port = htons(54321);
+    server.sin_port = htons(PORT);
     memset(&server.sin_zero, 0, 8);
     server.sin_addr.s_addr = inet_addr("127.0.0.1");
 
