@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 #include "game_ops.h"
 #ifndef PORT
-#define PORT 54321
+#define PORT 4242
 #endif
 #define MESSAGE_BUF_SIZE 4096
 

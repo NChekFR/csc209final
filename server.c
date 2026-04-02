@@ -213,7 +213,7 @@ int *connect_to_players() {
     struct sockaddr_in server;
     memset(&server, 0, sizeof(server));
     server.sin_family = AF_INET;
-    server.sin_port = htons(54321);
+    server.sin_port = htons(PORT);
     server.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     if (bind(listen_soc, (struct sockaddr *) &server, sizeof(server)) == -1) {
