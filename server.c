@@ -48,19 +48,19 @@ int clear_message_buf(char *message_buf) {
  * 0 -> no parsing error, message followed by boards
  * 1 -> parsing error/info message only
  */
-void form_message(char *message_buf, const char *message_to_write, int cur_player, int show_board) {
+void form_message(char *message_buf, size_t buf_size, const char *message_to_write, int cur_player, int show_board) {
     clear_message_buf(message_buf);
 
     size_t used = (size_t) snprintf(
         message_buf,
-        MESSAGE_BUF_SIZE,
+        buf_size,
         "%c%s",
         show_board ? '1' : '0',
         message_to_write
     );
 
-    if (used >= MESSAGE_BUF_SIZE) {
-        message_buf[MESSAGE_BUF_SIZE - 1] = '\0';
+    if (used >= buf_size) {
+        message_buf[buf_size - 1] = '\0';
         return;
     }
 
@@ -68,8 +68,8 @@ void form_message(char *message_buf, const char *message_to_write, int cur_playe
         char *opponent_board = return_board(player_board[abs(cur_player - 1)], 1);
         char *cur_player_board = return_board(player_board[cur_player], 0);
 
-        strncat(message_buf, opponent_board, MESSAGE_BUF_SIZE - strlen(message_buf) - 1);
-        strncat(message_buf, cur_player_board, MESSAGE_BUF_SIZE - strlen(message_buf) - 1);
+        strncat(message_buf, opponent_board, buf_size - strlen(message_buf) - 1);
+        strncat(message_buf, cur_player_board, buf_size - strlen(message_buf) - 1);
 
         free(opponent_board);
         free(cur_player_board);
@@ -150,19 +150,21 @@ static void cleanup_and_exit(int exit_code) {
             if (exit_code != -1 && exit_code != 2 && i != exit_code) {
                 snprintf(
                     close_message,
-                    MESSAGE_BUF_SIZE,
+                    sizeof(close_message),
                     "%s%d%s",
                     "Player ",
                     abs(i - 1) + 1,
                     " has disconnected. Game over.\r\n"
                 );
                 form_message(close_message_buf,
+							 sizeof(close_message_buf),
                              close_message,
                              i, 0);
                 send_all(player_sockets[i], close_message_buf, strlen(close_message_buf));
             }
             else if (exit_code == -1) {
                 form_message(close_message_buf,
+							 sizeof(close_message_buf),
                              "The game is over due to the server error.",
                              i, 0);
                 send_all(player_sockets[i], close_message_buf, strlen(close_message_buf));
@@ -257,6 +259,7 @@ int *connect_to_players() {
 
     char welcome_message_buf[MESSAGE_BUF_SIZE];
     form_message(welcome_message_buf,
+				 sizeof(welcome_message_buf),
                  "You have succesfully connected to the game! Waiting for the second player...\r\n",
                  0, 0);
     send_all(player_sockets[0], welcome_message_buf, strlen(welcome_message_buf));
@@ -277,6 +280,7 @@ int *connect_to_players() {
     fflush(stdout);
 
     form_message(welcome_message_buf,
+				 sizeof(welcome_message_buf),
                  "You have succesfully connected to the game! Waiting for the first player to make a move...\r\n",
                  0, 0);
     send_all(player_sockets[1], welcome_message_buf, strlen(welcome_message_buf));
@@ -292,7 +296,7 @@ int send_setup_prompt(int player_socket, int current_player, int ship_index) {
     char prompt[MESSAGE_BUF_SIZE];
 
     snprintf(prompt, sizeof(prompt), "Enter the coordinates of the %s\r\n", battleships[ship_index].name);
-    form_message(message_buf, prompt, current_player, 1);
+    form_message(message_buf, sizeof(message_buf), prompt, current_player, 1);
 
     if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
         return -1;
@@ -307,7 +311,7 @@ int send_move_prompt(int player_socket, int current_player, const char *message_
     snprintf(prompt, sizeof(prompt),
              "%sEnter the coordinates of the cell you want to hit.\r\n",
              message_to_opponent);
-    form_message(message_buf, prompt, current_player, 1);
+    form_message(message_buf, sizeof(message_buf), prompt, current_player, 1);
 
     if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
         return -1;
@@ -334,6 +338,7 @@ int create_battleship(int player_socket, int current_player, int ship_index, cha
     if (conversion_error == 0 || (parsed_response[2] != 0 && parsed_response[2] != 1)) {
         form_message(
             message_buf,
+			sizeof(message_buf),
             "Invalid input. Correct form: [x coordinate] [y coordinate] [orientation].\r\n",
             current_player,
             0);
@@ -354,6 +359,7 @@ int create_battleship(int player_socket, int current_player, int ship_index, cha
     if (result == 1) {
         form_message(
             message_buf,
+			sizeof(message_buf),
             "The battleship cannot be placed here. Please, try another spot.\r\n",
             current_player,
             0);
@@ -363,7 +369,7 @@ int create_battleship(int player_socket, int current_player, int ship_index, cha
         return 1;
     }
 
-    form_message(message_buf, "The battleship has been placed. Waiting for another player...\r\n", current_player, 1);
+    form_message(message_buf, sizeof(message_buf), "The battleship has been placed. Waiting for another player...\r\n", current_player, 1);
     if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
         return -1;
     }
@@ -390,7 +396,7 @@ int handle_player_move(int player_socket, int current_player, char *message_to_o
 
     int conversion_error = parse_response(response_buf, parsed_response, 2);
     if (conversion_error == 0) {
-        form_message(message_buf, "Invalid input. Correct form: [x coordinate] [y coordinate].\r\n",
+        form_message(message_buf, sizeof(message_buf), "Invalid input. Correct form: [x coordinate] [y coordinate].\r\n",
                      current_player, 0);
         if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
             return -1;
@@ -401,7 +407,7 @@ int handle_player_move(int player_socket, int current_player, char *message_to_o
     int result_of_the_hit = hit_battleship(player_board[opponent], parsed_response[0], parsed_response[1]);
 
     if (result_of_the_hit == -1) {
-        form_message(message_buf, "Invalid coordinates. Please, try again.\r\n", current_player, 0);
+        form_message(message_buf, sizeof(message_buf), "Invalid coordinates. Please, try again.\r\n", current_player, 0);
         if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
             return -1;
         }
@@ -409,7 +415,7 @@ int handle_player_move(int player_socket, int current_player, char *message_to_o
     }
 
     if (result_of_the_hit == -2) {
-        form_message(message_buf, "You already tried this cell. Choose another.\r\n", current_player, 0);
+        form_message(message_buf, sizeof(message_buf), "You already tried this cell. Choose another.\r\n", current_player, 0);
         if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
             return -1;
         }
@@ -424,15 +430,15 @@ int handle_player_move(int player_socket, int current_player, char *message_to_o
 
         if (player_battleships[opponent][battleship_id] == 0) {
             snprintf(message_to_opponent, opp_size, "Your battleship was destroyed! ");
-            form_message(message_buf, "You destroyed a battleship! Waiting for another player...\r\n", current_player,
+            form_message(message_buf, sizeof(message_buf), "You destroyed a battleship! Waiting for another player...\r\n", current_player,
                          1);
         } else {
             snprintf(message_to_opponent, opp_size, "Your battleship was damaged! ");
-            form_message(message_buf, "You hit a battleship! Waiting for another player...\r\n", current_player, 1);
+            form_message(message_buf, sizeof(message_buf), "You hit a battleship! Waiting for another player...\r\n", current_player, 1);
         }
     } else {
         snprintf(message_to_opponent, opp_size, "Your opponent has missed! ");
-        form_message(message_buf, "You missed a battleship! Waiting for another player...\r\n", current_player, 1);
+        form_message(message_buf, sizeof(message_buf), "You missed a battleship! Waiting for another player...\r\n", current_player, 1);
     }
 
     if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
@@ -445,6 +451,7 @@ int handle_player_move(int player_socket, int current_player, char *message_to_o
 int wrong_turn_message(int player_socket, int current_player) {
     char message_buf[MESSAGE_BUF_SIZE];
     form_message(message_buf,
+				 sizeof(message_buf),
                  "It is not your turn to make a move now. Please, wait for another player.\r\n",
                  current_player,
                  0);
@@ -582,12 +589,12 @@ int main() {
 
     char message_buf[MESSAGE_BUF_SIZE];
 
-    form_message(message_buf, "You won!\r\n", player_wins, 1);
+    form_message(message_buf, sizeof(message_buf), "You won!\r\n", player_wins, 1);
     if (send_all(player_sockets[player_wins], message_buf, strlen(message_buf)) <= 0) {
         cleanup_and_exit(2);
     }
 
-    form_message(message_buf, "You lost!\r\n", abs(player_wins - 1), 1);
+    form_message(message_buf, sizeof(message_buf), "You lost!\r\n", abs(player_wins - 1), 1);
     if (send_all(player_sockets[abs(player_wins - 1)], message_buf, strlen(message_buf)) <= 0) {
         cleanup_and_exit(2);
     }
