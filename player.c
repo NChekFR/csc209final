@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netinet/in.h>    /* Internet domain header */
 #include <netdb.h>
 #include <stdbool.h>
@@ -81,9 +82,13 @@ void display_opponent_board(const char *board) {
 
 // Function to receive a message from the server and update the boards accordingly
 // first integer is the status of the message (0 for normal message, 1 for error)
-int receive_server_message(int soc, char *status, char *message_buf,
+int receive_server_message(int soc, char *status, char *action_required, char *message_buf,
                            char *opponent_board, char *player_board) {
     if (read_exact(soc, status, 1) <= 0) {
+        return 1;
+    }
+
+    if (read_exact(soc, action_required, 1) <= 0) {
         return 1;
     }
 
@@ -104,6 +109,10 @@ int receive_server_message(int soc, char *status, char *message_buf,
     }
 
     return 0;
+}
+
+void clear_terminal() {
+    system("clear");
 }
 
 int main() {
@@ -150,25 +159,49 @@ int main() {
     char opponent_board[BOARD_SERIALIZED_SIZE + 1];
     char player_board_buf[BOARD_SERIALIZED_SIZE + 1];
     char status;
+    char action_required;
+
+    fd_set read_fds, init_fds;
+
+    FD_ZERO(&init_fds);
+
+    FD_SET(STDIN_FILENO, &init_fds);
+    FD_SET(soc, &init_fds);
+
+    int max_fd = soc;
+    if (STDIN_FILENO > max_fd) {
+        max_fd = STDIN_FILENO;
+    }
+    int retval;
 
     while (true) {
-        if (receive_server_message(soc, &status, message_buf, opponent_board, player_board_buf) != 0) {
+        read_fds = init_fds;
+
+        retval = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
+
+        if (retval == -1) {
+            perror("select");
             break;
         }
 
-        if (status == '0') {
-            display_legend();
-            display_opponent_board(opponent_board);
-            display_player_board(player_board_buf);
-        }
-        printf("%s", message_buf);
+        if (FD_ISSET(soc, &read_fds)) {
+            if (receive_server_message(soc, &status, &action_required, message_buf, opponent_board, player_board_buf) != 0) {
+                break;
+            }
+            if (status == '0') {
+                display_legend();
+                display_opponent_board(opponent_board);
+                display_player_board(player_board_buf);
+            }
+            printf("%s", message_buf);
 
-        if (strncmp(message_buf, "You won!", 8) == 0 || strncmp(message_buf, "You lost!", 9) == 0) {
-            break;
+            if (strncmp(message_buf, "You won!", 8) == 0 || strncmp(message_buf, "You lost!", 9) == 0) {
+                break;
+            }
         }
 
-        // check for the validity of the message and if it is valid then send it to the server
-        if (strstr(message_buf, "Enter the") != NULL) {
+
+        if (FD_ISSET(STDIN_FILENO, &read_fds)) {
             if (fgets(user_input, sizeof(user_input), stdin) == NULL) {
                 break;
             }

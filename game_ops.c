@@ -51,7 +51,6 @@ int insert_battleship(Battleship_cell*** board, Battleship* battleship,
     int battleship_orientation, int x, int y) {
     int width = battleship->width;
     int height = battleship->height;
-
     if (battleship_orientation == 1) {
         int buf = width;
         width = height;
