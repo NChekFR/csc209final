@@ -173,7 +173,10 @@ static void cleanup_and_exit(int exit_code) {
         }
         free(player_sockets);
     }
-
+    if (exit_code != -1 && exit_code != 2) {
+        printf("Player %d exited. Game over.\n", exit_code + 1);
+        fflush(stdout);
+    }
     if (exit_code <= 0)
         exit(1);
     exit(0);
@@ -321,8 +324,6 @@ int send_move_prompt(int player_socket, int current_player, const char *message_
 int create_battleship(int player_socket, int current_player, int ship_index, char *response_buf) {
     ssize_t n = read_line(player_socket, response_buf, MESSAGE_BUF_SIZE);
     if (n <= 0) {
-        printf("Player %d exited\n", current_player + 1);
-        fflush(stdout);
         cleanup_and_exit(current_player);
     }
 
@@ -384,8 +385,6 @@ int handle_player_move(int player_socket, int current_player, char *message_to_o
     char response_buf[MESSAGE_BUF_SIZE];
     ssize_t n = read_line(player_socket, response_buf, MESSAGE_BUF_SIZE);
     if (n <= 0) {
-        printf("Player %d exited\n", current_player + 1);
-        fflush(stdout);
         cleanup_and_exit(current_player);
     }
 
@@ -476,8 +475,6 @@ int main() {
         int ship_index = player_battleships_num[current_player_turn];
 
         if (send_setup_prompt(player_sockets[current_player_turn], current_player_turn, ship_index) < 0) {
-            printf("Player %d exited\n", current_player_turn + 1);
-            fflush(stdout);
             cleanup_and_exit(current_player_turn);
         }
 
@@ -498,13 +495,9 @@ int main() {
                     char discard_buf[MESSAGE_BUF_SIZE];
                     ssize_t n = read_line(player_sockets[i], discard_buf, sizeof(discard_buf));
                     if (n <= 0) {
-                        printf("Player %d exited\n", i + 1);
-                        fflush(stdout);
                         cleanup_and_exit(i);
                     }
                     if (wrong_turn_message( player_sockets[i], i) < 0) {
-                        printf("Player %d exited\n", i + 1);
-                        fflush(stdout);
                         cleanup_and_exit(i);
                     }
                     continue;
@@ -531,8 +524,6 @@ int main() {
 
     while (game_over == 0) {
         if (send_move_prompt(player_sockets[current_player_turn], current_player_turn, message_to_opponent) < 0) {
-            printf("Player %d exited\n", current_player_turn + 1);
-            fflush(stdout);
             cleanup_and_exit(current_player_turn);
         }
 
@@ -554,13 +545,9 @@ int main() {
                     char discard_buf[MESSAGE_BUF_SIZE];
                     ssize_t n = read_line(player_sockets[i], discard_buf, sizeof(discard_buf));
                     if (n <= 0) {
-                        printf("Player %d exited\n", i + 1);
-                        fflush(stdout);
                         cleanup_and_exit(i);
                     }
                     if (wrong_turn_message(player_sockets[i], i) < 0) {
-                        printf("Player %d exited\n", i + 1);
-                        fflush(stdout);
                         cleanup_and_exit(i);
                     }
                     continue;
