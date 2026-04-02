@@ -113,10 +113,6 @@ int receive_server_message(int soc, char *status, char *action_required, char *m
     return 0;
 }
 
-void clear_terminal() {
-    system("clear");
-}
-
 int main() {
 
 
