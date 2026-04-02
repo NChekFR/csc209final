@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 #include "game_ops.h"
 #ifndef PORT
-#define PORT 4242
+#define PORT 54321
 #endif
 #define MESSAGE_BUF_SIZE 4096
 
@@ -84,13 +84,9 @@ void display_opponent_board(const char *board) {
 
 // Function to receive a message from the server and update the boards accordingly
 // first integer is the status of the message (0 for normal message, 1 for error)
-int receive_server_message(int soc, char *status, char *action_required, char *message_buf,
+int receive_server_message(int soc, char *status, char *message_buf,
                            char *opponent_board, char *player_board) {
     if (read_exact(soc, status, 1) <= 0) {
-        return 1;
-    }
-
-    if (read_exact(soc, action_required, 1) <= 0) {
         return 1;
     }
 
@@ -98,7 +94,7 @@ int receive_server_message(int soc, char *status, char *action_required, char *m
         return 1;
     }
 
-    if (*status == '0') {
+    if (*status == '1') {
         if (read_exact(soc, opponent_board, BOARD_SERIALIZED_SIZE) <= 0) {
             return 1;
         }
@@ -157,7 +153,6 @@ int main() {
     char opponent_board[BOARD_SERIALIZED_SIZE + 1];
     char player_board_buf[BOARD_SERIALIZED_SIZE + 1];
     char status;
-    char action_required;
 
     fd_set read_fds, init_fds;
 
@@ -183,10 +178,12 @@ int main() {
         }
 
         if (FD_ISSET(soc, &read_fds)) {
-            if (receive_server_message(soc, &status, &action_required, message_buf, opponent_board, player_board_buf) != 0) {
+            if (receive_server_message(soc, &status, message_buf, opponent_board, player_board_buf) != 0) {
+                printf("Server disconnected. Game over.\n");
+                fflush(stdout);
                 break;
             }
-            if (status == '0') {
+            if (status == '1') {
                 display_legend();
                 display_opponent_board(opponent_board);
                 display_player_board(player_board_buf);
