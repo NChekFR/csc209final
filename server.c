@@ -339,7 +339,8 @@ int create_battleship(int player_socket, int current_player, int ship_index, cha
         form_message(
             message_buf,
 			sizeof(message_buf),
-            "Invalid input. Correct form: [x coordinate] [y coordinate] [orientation].\r\n",
+            "Invalid input. Correct form: [x coordinate (0 to 9)] [y coordinate (0 to 9)]"
+			" [orientation (0 is vertical and 1 is horizontal)].\r\n",
             current_player,
             0);
         if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
@@ -360,7 +361,7 @@ int create_battleship(int player_socket, int current_player, int ship_index, cha
         form_message(
             message_buf,
 			sizeof(message_buf),
-            "The battleship cannot be placed here. Please, try another spot.\r\n",
+            "The battleship cannot be placed here. Please try another spot.\r\n",
             current_player,
             0);
         if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
@@ -396,7 +397,7 @@ int handle_player_move(int player_socket, int current_player, char *message_to_o
 
     int conversion_error = parse_response(response_buf, parsed_response, 2);
     if (conversion_error == 0) {
-        form_message(message_buf, sizeof(message_buf), "Invalid input. Correct form: [x coordinate] [y coordinate].\r\n",
+        form_message(message_buf, sizeof(message_buf), "Invalid input. Correct form: [x coordinate (0 to 9)] [y coordinate (0 to 9)].\r\n",
                      current_player, 0);
         if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
             return -1;
@@ -407,7 +408,7 @@ int handle_player_move(int player_socket, int current_player, char *message_to_o
     int result_of_the_hit = hit_battleship(player_board[opponent], parsed_response[0], parsed_response[1]);
 
     if (result_of_the_hit == -1) {
-        form_message(message_buf, sizeof(message_buf), "Invalid coordinates. Please, try again.\r\n", current_player, 0);
+        form_message(message_buf, sizeof(message_buf), "Invalid coordinates. Please try again with [x coordinate (0 to 9)] [y coordinate (0 to 9)].\r\n", current_player, 0);
         if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
             return -1;
         }
@@ -430,15 +431,15 @@ int handle_player_move(int player_socket, int current_player, char *message_to_o
 
         if (player_battleships[opponent][battleship_id] == 0) {
             snprintf(message_to_opponent, opp_size, "Your battleship was destroyed! ");
-            form_message(message_buf, sizeof(message_buf), "You destroyed a battleship! Waiting for another player...\r\n", current_player,
+            form_message(message_buf, sizeof(message_buf), "You destroyed a battleship! Waiting for the other player...\r\n", current_player,
                          1);
         } else {
             snprintf(message_to_opponent, opp_size, "Your battleship was damaged! ");
-            form_message(message_buf, sizeof(message_buf), "You hit a battleship! Waiting for another player...\r\n", current_player, 1);
+            form_message(message_buf, sizeof(message_buf), "You hit a battleship! Waiting for the other player...\r\n", current_player, 1);
         }
     } else {
         snprintf(message_to_opponent, opp_size, "Your opponent has missed! ");
-        form_message(message_buf, sizeof(message_buf), "You missed a battleship! Waiting for another player...\r\n", current_player, 1);
+        form_message(message_buf, sizeof(message_buf), "You missed! Waiting for the other player...\r\n", current_player, 1);
     }
 
     if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
@@ -452,7 +453,7 @@ int wrong_turn_message(int player_socket, int current_player) {
     char message_buf[MESSAGE_BUF_SIZE];
     form_message(message_buf,
 				 sizeof(message_buf),
-                 "It is not your turn to make a move now. Please, wait for another player.\r\n",
+                 "It is not your turn to make a move right now. Please wait for the other player.\r\n",
                  current_player,
                  0);
     if (send_all(player_socket, message_buf, strlen(message_buf)) <= 0) {
